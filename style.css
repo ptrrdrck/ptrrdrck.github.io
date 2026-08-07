@@ -134,25 +134,17 @@ a.button {
   }
 }
 
-@-webkit-keyframes typing {
-  from {
-    width: 0;
-  }
-}
-@-webkit-keyframes blink-caret {
-  50% {
-    border-color: transparent;
-  }
+.typing-line {
+  width: var(--w);
+  white-space: nowrap;
+  overflow: hidden;
+  animation: typing var(--dur) steps(var(--steps), end) var(--delay) both;
 }
 
 #typing {
   border-right: 0.08em solid black;
-  width: 16.7em;
-  width: 21.3ch;
-  white-space: nowrap;
-  overflow: hidden;
-  animation: typing 2s steps(19, end), blink-caret 0.5s step-end infinite alternate;
-  -webkit-animation: typing 2s steps(19, end), blink-caret 0.5s step-end infinite alternate;
+  animation: typing var(--dur) steps(var(--steps), end) var(--delay) both,
+    blink-caret 0.5s step-end infinite alternate var(--delay);
 }
 
 #photo {
