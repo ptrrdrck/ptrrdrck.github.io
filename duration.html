@@ -173,75 +173,63 @@
       const startFieldEl = document.querySelector('.time-entry[data-field="start"]');
       const tzSelect = document.getElementById("timezone-select");
 
-      function getTimeInZone(timeZone) {
-        const parts = new Intl.DateTimeFormat("en-US", {
-          timeZone,
-          hour: "2-digit",
-          minute: "2-digit",
-          hourCycle: "h23",
-        }).formatToParts(new Date());
-        const hour24 = Number(parts.find((p) => p.type === "hour").value) % 24;
-        const minute = Number(parts.find((p) => p.type === "minute").value);
-        return { hour24, minute };
+      function formatOffset(offsetMinutes) {
+        const sign = offsetMinutes < 0 ? "-" : "+";
+        const abs = Math.abs(offsetMinutes);
+        const hours = Math.floor(abs / 60);
+        const minutes = abs % 60;
+        return `GMT${sign}${hours}${minutes ? ":" + String(minutes).padStart(2, "0") : ""}`;
+      }
+
+      function getTimeAtOffset(offsetMinutes) {
+        const now = new Date();
+        const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+        const total = (((utcMinutes + offsetMinutes) % 1440) + 1440) % 1440;
+        return { hour24: Math.floor(total / 60), minute: total % 60 };
       }
 
       function fillStartWithNow() {
-        const { hour24, minute } = getTimeInZone(tzSelect.value);
+        const { hour24, minute } = getTimeAtOffset(Number(tzSelect.value));
         state.start.hour24 = hour24;
         state.start.minute = minute;
         renderField(startFieldEl, "start");
         calculateDuration();
       }
 
-      function getOffsetMinutes(timeZone, date) {
-        const parts = new Intl.DateTimeFormat("en-US", {
-          timeZone,
-          hourCycle: "h23",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })
-          .formatToParts(date)
-          .reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
-        const asUTC = Date.UTC(
-          parts.year,
-          parts.month - 1,
-          parts.day,
-          parts.hour === "24" ? 0 : parts.hour,
-          parts.minute,
-          parts.second
-        );
-        return Math.round((asUTC - date.getTime()) / 60000);
-      }
-
-      function gmtLabel(timeZone, date) {
-        return new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
-          .formatToParts(date)
-          .find((p) => p.type === "timeZoneName").value;
-      }
-
-      const defaultZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const now = new Date();
-      const zones =
+      // Real-world GMT offsets currently in use, derived from the IANA
+      // database when available so oddities like GMT+5:45 are included.
+      const detectedOffset = -new Date().getTimezoneOffset();
+      const fallbackOffsets = [
+        -720, -660, -600, -570, -540, -480, -420, -360, -300, -270, -240,
+        -210, -180, -150, -120, -60, 0, 60, 120, 180, 210, 240, 270, 300,
+        330, 345, 360, 390, 420, 480, 525, 540, 570, 600, 630, 660, 690,
+        720, 765, 780, 840,
+      ];
+      const offsets =
         typeof Intl.supportedValuesOf === "function"
-          ? Intl.supportedValuesOf("timeZone")
-          : [defaultZone];
-      if (!zones.includes(defaultZone)) zones.push(defaultZone);
+          ? Intl.supportedValuesOf("timeZone").map((zone) => {
+              const parts = new Intl.DateTimeFormat("en-US", {
+                timeZone: zone,
+                timeZoneName: "shortOffset",
+              }).formatToParts();
+              const [, sign, h, m] = parts
+                .find((p) => p.type === "timeZoneName")
+                .value.match(/GMT([+-])(\d+)(?::(\d+))?/);
+              return (sign === "-" ? -1 : 1) * (Number(h) * 60 + Number(m || 0));
+            })
+          : fallbackOffsets;
 
-      const zoneOptions = zones
-        .map((zone) => ({ zone, offset: getOffsetMinutes(zone, now) }))
-        .sort((a, b) => a.offset - b.offset || a.zone.localeCompare(b.zone));
+      const uniqueOffsets = Array.from(new Set([...offsets, detectedOffset])).sort(
+        (a, b) => a - b
+      );
 
-      zoneOptions.forEach(({ zone }) => {
+      uniqueOffsets.forEach((offset) => {
         const option = document.createElement("option");
-        option.value = zone;
-        option.textContent = gmtLabel(zone, now);
+        option.value = offset;
+        option.textContent = formatOffset(offset);
         tzSelect.appendChild(option);
       });
-      tzSelect.value = defaultZone;
+      tzSelect.value = detectedOffset;
 
       nowLink.addEventListener("click", (e) => {
         e.preventDefault();
