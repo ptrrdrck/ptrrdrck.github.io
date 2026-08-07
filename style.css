@@ -112,10 +112,6 @@ a.button {
   flex-grow: 2;
 }
 
-#discuss {
-  margin: 0 0 50px;
-}
-
 .email {
   display: inline-block;
   background: none;
