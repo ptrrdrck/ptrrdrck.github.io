@@ -207,6 +207,20 @@ a.button {
   color: azure;
 }
 
+.tz-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  max-width: 40vw;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tz-select::-ms-expand {
+  display: none;
+}
+
 #duration-widget {
   font-family: 'Fira Code', monospace;
   margin: 20px auto 50px;

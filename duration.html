@@ -17,6 +17,7 @@
       <p class="fade-in">time duration calculator</p>
     </header>
     <div id="format-toggle" class="fade-in">
+      <select id="timezone-select" class="format-btn tz-select" aria-label="time zone"></select>
       <button type="button" class="format-btn active" data-format="24">24h</button>
       <button type="button" class="format-btn" data-format="12">12h</button>
     </div>
@@ -170,15 +171,49 @@
 
       const nowLink = document.getElementById("now-link");
       const startFieldEl = document.querySelector('.time-entry[data-field="start"]');
+      const tzSelect = document.getElementById("timezone-select");
+
+      function getTimeInZone(timeZone) {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone,
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        }).formatToParts(new Date());
+        const hour24 = Number(parts.find((p) => p.type === "hour").value) % 24;
+        const minute = Number(parts.find((p) => p.type === "minute").value);
+        return { hour24, minute };
+      }
+
+      function fillStartWithNow() {
+        const { hour24, minute } = getTimeInZone(tzSelect.value);
+        state.start.hour24 = hour24;
+        state.start.minute = minute;
+        renderField(startFieldEl, "start");
+        calculateDuration();
+      }
+
+      const defaultZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const zones =
+        typeof Intl.supportedValuesOf === "function"
+          ? Intl.supportedValuesOf("timeZone")
+          : [defaultZone];
+      if (!zones.includes(defaultZone)) zones.push(defaultZone);
+      zones.sort();
+      zones.forEach((zone) => {
+        const option = document.createElement("option");
+        option.value = zone;
+        option.textContent = zone;
+        tzSelect.appendChild(option);
+      });
+      tzSelect.value = defaultZone;
 
       nowLink.addEventListener("click", (e) => {
         e.preventDefault();
-        const now = new Date();
-        state.start.hour24 = now.getHours();
-        state.start.minute = now.getMinutes();
-        renderField(startFieldEl, "start");
-        calculateDuration();
+        fillStartWithNow();
       });
+
+      tzSelect.addEventListener("change", fillStartWithNow);
 
       formatButtons.forEach((btn) => {
         btn.addEventListener("click", () => {
