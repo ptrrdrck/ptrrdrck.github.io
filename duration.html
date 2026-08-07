@@ -16,14 +16,34 @@
     <header>
       <p class="fade-in">time duration calculator</p>
     </header>
+    <div id="format-toggle" class="fade-in">
+      <button type="button" class="format-btn active" data-format="24">24h</button>
+      <button type="button" class="format-btn" data-format="12">12h</button>
+    </div>
     <section id="duration-widget" class="about fade-in">
       <div class="duration-row">
-        <label for="start-time">start</label>
-        <input type="time" id="start-time" />
+        <label>start</label>
+        <div class="time-entry" data-field="start">
+          <input type="number" class="hour-input" min="0" max="23" placeholder="HH" aria-label="start hour" />
+          <span>:</span>
+          <input type="number" class="minute-input" min="0" max="59" placeholder="MM" aria-label="start minute" />
+          <select class="period-select" hidden aria-label="start AM/PM">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
       </div>
       <div class="duration-row">
-        <label for="end-time">end</label>
-        <input type="time" id="end-time" />
+        <label>end</label>
+        <div class="time-entry" data-field="end">
+          <input type="number" class="hour-input" min="0" max="23" placeholder="HH" aria-label="end hour" />
+          <span>:</span>
+          <input type="number" class="minute-input" min="0" max="59" placeholder="MM" aria-label="end minute" />
+          <select class="period-select" hidden aria-label="end AM/PM">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
       </div>
       <div id="duration-result">&mdash;</div>
     </section>
@@ -33,19 +53,86 @@
       >
     </footer>
     <script>
-      const startInput = document.getElementById("start-time");
-      const endInput = document.getElementById("end-time");
+      let format = "24"; // "24" or "12"
+      const state = {
+        start: { hour24: null, minute: null },
+        end: { hour24: null, minute: null },
+      };
+
+      const formatButtons = document.querySelectorAll(".format-btn");
+      const fields = document.querySelectorAll(".time-entry");
       const result = document.getElementById("duration-result");
 
-      function toMinutes(value) {
-        if (!value) return null;
-        const [hours, minutes] = value.split(":").map(Number);
-        return hours * 60 + minutes;
+      function to12Hour(hour24) {
+        const period = hour24 >= 12 ? "PM" : "AM";
+        const hour = hour24 % 12 || 12;
+        return { hour, period };
+      }
+
+      function to24Hour(hour12, period) {
+        let hour24 = hour12 % 12;
+        if (period === "PM") hour24 += 12;
+        return hour24;
+      }
+
+      function renderField(fieldEl, key) {
+        const hourInput = fieldEl.querySelector(".hour-input");
+        const minuteInput = fieldEl.querySelector(".minute-input");
+        const periodSelect = fieldEl.querySelector(".period-select");
+        const { hour24, minute } = state[key];
+
+        periodSelect.hidden = format === "24";
+
+        if (hour24 === null) {
+          hourInput.value = "";
+          periodSelect.value = "AM";
+        } else if (format === "24") {
+          hourInput.min = 0;
+          hourInput.max = 23;
+          hourInput.value = hour24;
+        } else {
+          hourInput.min = 1;
+          hourInput.max = 12;
+          const { hour, period } = to12Hour(hour24);
+          hourInput.value = hour;
+          periodSelect.value = period;
+        }
+
+        minuteInput.value = minute === null ? "" : String(minute).padStart(2, "0");
+      }
+
+      function readField(fieldEl, key) {
+        const hourInput = fieldEl.querySelector(".hour-input");
+        const minuteInput = fieldEl.querySelector(".minute-input");
+        const periodSelect = fieldEl.querySelector(".period-select");
+
+        if (hourInput.value === "" || minuteInput.value === "") {
+          state[key].hour24 = null;
+          state[key].minute = null;
+          return;
+        }
+
+        let hour = Number(hourInput.value);
+        const minute = Math.min(59, Math.max(0, Number(minuteInput.value)));
+
+        if (format === "24") {
+          hour = Math.min(23, Math.max(0, hour));
+          state[key].hour24 = hour;
+        } else {
+          hour = Math.min(12, Math.max(1, hour));
+          state[key].hour24 = to24Hour(hour, periodSelect.value);
+        }
+        state[key].minute = minute;
+      }
+
+      function toMinutes({ hour24, minute }) {
+        if (hour24 === null || minute === null) return null;
+        return hour24 * 60 + minute;
       }
 
       function calculateDuration() {
-        const start = toMinutes(startInput.value);
-        const end = toMinutes(endInput.value);
+        const start = toMinutes(state.start);
+        const end = toMinutes(state.end);
 
         if (start === null || end === null) {
           result.textContent = "—";
@@ -65,8 +152,29 @@
         result.textContent = diff === 0 ? "0h 0m" : label;
       }
 
-      startInput.addEventListener("input", calculateDuration);
-      endInput.addEventListener("input", calculateDuration);
+      fields.forEach((fieldEl) => {
+        const key = fieldEl.dataset.field;
+        fieldEl.querySelectorAll("input, select").forEach((el) => {
+          el.addEventListener("input", () => {
+            readField(fieldEl, key);
+            calculateDuration();
+          });
+          el.addEventListener("change", () => {
+            readField(fieldEl, key);
+            renderField(fieldEl, key);
+            calculateDuration();
+          });
+        });
+      });
+
+      formatButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (btn.dataset.format === format) return;
+          format = btn.dataset.format;
+          formatButtons.forEach((b) => b.classList.toggle("active", b === btn));
+          fields.forEach((fieldEl) => renderField(fieldEl, fieldEl.dataset.field));
+        });
+      });
     </script>
   </body>
 </html>
