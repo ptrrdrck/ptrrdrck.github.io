@@ -55,15 +55,35 @@
       >
     </footer>
     <script>
-      let format = "24"; // "24" or "12"
+      const STORAGE_KEYS = { format: "duration-format", offset: "duration-offset" };
+
+      function safeGetItem(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function safeSetItem(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {
+          // ignore (e.g. storage disabled)
+        }
+      }
+
+      let format = safeGetItem(STORAGE_KEYS.format) === "12" ? "12" : "24";
       const state = {
         start: { hour24: null, minute: null },
         end: { hour24: null, minute: null },
       };
 
-      const formatButtons = document.querySelectorAll(".format-btn");
+      const formatButtons = document.querySelectorAll(".format-btn[data-format]");
       const fields = document.querySelectorAll(".time-entry");
       const result = document.getElementById("duration-result");
+
+      formatButtons.forEach((b) => b.classList.toggle("active", b.dataset.format === format));
 
       function to12Hour(hour24) {
         const period = hour24 >= 12 ? "PM" : "AM";
@@ -229,19 +249,26 @@
         option.textContent = formatOffset(offset);
         tzSelect.appendChild(option);
       });
-      tzSelect.value = detectedOffset;
+
+      const storedOffsetRaw = safeGetItem(STORAGE_KEYS.offset);
+      const storedOffset = storedOffsetRaw === null ? null : Number(storedOffsetRaw);
+      tzSelect.value = uniqueOffsets.includes(storedOffset) ? storedOffset : detectedOffset;
 
       nowLink.addEventListener("click", (e) => {
         e.preventDefault();
         fillStartWithNow();
       });
 
-      tzSelect.addEventListener("change", fillStartWithNow);
+      tzSelect.addEventListener("change", () => {
+        safeSetItem(STORAGE_KEYS.offset, tzSelect.value);
+        fillStartWithNow();
+      });
 
       formatButtons.forEach((btn) => {
         btn.addEventListener("click", () => {
           if (btn.dataset.format === format) return;
           format = btn.dataset.format;
+          safeSetItem(STORAGE_KEYS.format, format);
           formatButtons.forEach((b) => b.classList.toggle("active", b === btn));
           fields.forEach((fieldEl) => renderField(fieldEl, fieldEl.dataset.field));
         });
