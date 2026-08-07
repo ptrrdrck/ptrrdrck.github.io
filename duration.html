@@ -25,9 +25,9 @@
       <div class="duration-row">
         <label>start</label>
         <div class="time-entry" data-field="start">
-          <input type="number" class="hour-input" min="0" max="23" placeholder="HH" aria-label="start hour" />
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="hour-input" placeholder="HH" aria-label="start hour" />
           <span>:</span>
-          <input type="number" class="minute-input" min="0" max="59" placeholder="MM" aria-label="start minute" />
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="minute-input" placeholder="MM" aria-label="start minute" />
           <select class="period-select" hidden aria-label="start AM/PM">
             <option value="AM">AM</option>
             <option value="PM">PM</option>
@@ -38,9 +38,9 @@
       <div class="duration-row">
         <label>end</label>
         <div class="time-entry" data-field="end">
-          <input type="number" class="hour-input" min="0" max="23" placeholder="HH" aria-label="end hour" />
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="hour-input" placeholder="HH" aria-label="end hour" />
           <span>:</span>
-          <input type="number" class="minute-input" min="0" max="59" placeholder="MM" aria-label="end minute" />
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="minute-input" placeholder="MM" aria-label="end minute" />
           <select class="period-select" hidden aria-label="end AM/PM">
             <option value="AM">AM</option>
             <option value="PM">PM</option>
@@ -107,44 +107,41 @@
 
         if (hour24 === null) {
           hourInput.value = "";
-          periodSelect.value = "AM";
         } else if (format === "24") {
-          hourInput.min = 0;
-          hourInput.max = 23;
-          hourInput.value = hour24;
+          hourInput.value = String(hour24).padStart(2, "0");
         } else {
-          hourInput.min = 1;
-          hourInput.max = 12;
           const { hour, period } = to12Hour(hour24);
-          hourInput.value = hour;
+          hourInput.value = String(hour).padStart(2, "0");
           periodSelect.value = period;
         }
 
         minuteInput.value = minute === null ? "" : String(minute).padStart(2, "0");
       }
 
+      function sanitizeDigits(input) {
+        const digits = input.value.replace(/[^0-9]/g, "").slice(0, 2);
+        if (digits !== input.value) input.value = digits;
+      }
+
+      // Each part (hour/minute) is read and stored independently, so
+      // finishing one part never clobbers a part the user hasn't typed
+      // into yet (e.g. tabbing from hour to a still-empty minute field).
       function readField(fieldEl, key) {
         const hourInput = fieldEl.querySelector(".hour-input");
         const minuteInput = fieldEl.querySelector(".minute-input");
         const periodSelect = fieldEl.querySelector(".period-select");
 
-        if (hourInput.value === "" || minuteInput.value === "") {
+        if (hourInput.value === "") {
           state[key].hour24 = null;
-          state[key].minute = null;
-          return;
-        }
-
-        let hour = Number(hourInput.value);
-        const minute = Math.min(59, Math.max(0, Number(minuteInput.value)));
-
-        if (format === "24") {
-          hour = Math.min(23, Math.max(0, hour));
-          state[key].hour24 = hour;
+        } else if (format === "24") {
+          state[key].hour24 = Math.min(23, Math.max(0, Number(hourInput.value)));
         } else {
-          hour = Math.min(12, Math.max(1, hour));
+          const hour = Math.min(12, Math.max(1, Number(hourInput.value)));
           state[key].hour24 = to24Hour(hour, periodSelect.value);
         }
-        state[key].minute = minute;
+
+        state[key].minute =
+          minuteInput.value === "" ? null : Math.min(59, Math.max(0, Number(minuteInput.value)));
       }
 
       function toMinutes({ hour24, minute }) {
@@ -178,6 +175,9 @@
         const key = fieldEl.dataset.field;
         fieldEl.querySelectorAll("input, select").forEach((el) => {
           el.addEventListener("input", () => {
+            if (el.classList.contains("hour-input") || el.classList.contains("minute-input")) {
+              sanitizeDigits(el);
+            }
             readField(fieldEl, key);
             calculateDuration();
           });
@@ -228,13 +228,15 @@
       const offsets =
         typeof Intl.supportedValuesOf === "function"
           ? Intl.supportedValuesOf("timeZone").map((zone) => {
-              const parts = new Intl.DateTimeFormat("en-US", {
+              const raw = new Intl.DateTimeFormat("en-US", {
                 timeZone: zone,
                 timeZoneName: "shortOffset",
-              }).formatToParts();
-              const [, sign, h, m] = parts
-                .find((p) => p.type === "timeZoneName")
-                .value.match(/GMT([+-])(\d+)(?::(\d+))?/);
+              })
+                .formatToParts()
+                .find((p) => p.type === "timeZoneName").value;
+              // Zero-offset zones format as bare "GMT" with no sign/digits.
+              if (raw === "GMT") return 0;
+              const [, sign, h, m] = raw.match(/GMT([+-])(\d+)(?::(\d+))?/);
               return (sign === "-" ? -1 : 1) * (Number(h) * 60 + Number(m || 0));
             })
           : fallbackOffsets;
