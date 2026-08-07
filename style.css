@@ -193,9 +193,12 @@ a.button {
   margin: 0;
 }
 
+.format-btn:not(:last-child) {
+  border-right: none;
+}
+
 .format-btn:first-child {
   border-radius: 4px 0 0 4px;
-  border-right: none;
 }
 
 .format-btn:last-child {
