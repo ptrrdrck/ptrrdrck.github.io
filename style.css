@@ -112,10 +112,8 @@ a.button {
   flex-grow: 2;
 }
 
-#right {
-  flex-grow: 1;
-  align-self: stretch;
-  overflow: hidden;
+#discuss {
+  margin: 0 0 50px;
 }
 
 .email {
