@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ptrrdrck // duration</title>
+    <link href="./style.css" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header>
+      <p class="fade-in">time duration calculator</p>
+    </header>
+    <section id="duration-widget" class="about fade-in">
+      <div class="duration-row">
+        <label for="start-time">start</label>
+        <input type="time" id="start-time" />
+      </div>
+      <div class="duration-row">
+        <label for="end-time">end</label>
+        <input type="time" id="end-time" />
+      </div>
+      <div id="duration-result">&mdash;</div>
+    </section>
+    <footer>
+      <a class="button" href="https://ptrrdrck.github.io/"
+        >back<span class="emoji">&#128072;</span></a
+      >
+    </footer>
+    <script>
+      const startInput = document.getElementById("start-time");
+      const endInput = document.getElementById("end-time");
+      const result = document.getElementById("duration-result");
+
+      function toMinutes(value) {
+        if (!value) return null;
+        const [hours, minutes] = value.split(":").map(Number);
+        return hours * 60 + minutes;
+      }
+
+      function calculateDuration() {
+        const start = toMinutes(startInput.value);
+        const end = toMinutes(endInput.value);
+
+        if (start === null || end === null) {
+          result.textContent = "—";
+          return;
+        }
+
+        let diff = end - start;
+        let overnight = false;
+        if (diff < 0) {
+          diff += 24 * 60;
+          overnight = true;
+        }
+
+        const hours = Math.floor(diff / 60);
+        const minutes = diff % 60;
+        const label = `${hours}h ${minutes}m${overnight ? " (next day)" : ""}`;
+        result.textContent = diff === 0 ? "0h 0m" : label;
+      }
+
+      startInput.addEventListener("input", calculateDuration);
+      endInput.addEventListener("input", calculateDuration);
+    </script>
+  </body>
+</html>
