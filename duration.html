@@ -193,17 +193,52 @@
         calculateDuration();
       }
 
+      function getOffsetMinutes(timeZone, date) {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone,
+          hourCycle: "h23",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+          .formatToParts(date)
+          .reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
+        const asUTC = Date.UTC(
+          parts.year,
+          parts.month - 1,
+          parts.day,
+          parts.hour === "24" ? 0 : parts.hour,
+          parts.minute,
+          parts.second
+        );
+        return Math.round((asUTC - date.getTime()) / 60000);
+      }
+
+      function gmtLabel(timeZone, date) {
+        return new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
+          .formatToParts(date)
+          .find((p) => p.type === "timeZoneName").value;
+      }
+
       const defaultZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const now = new Date();
       const zones =
         typeof Intl.supportedValuesOf === "function"
           ? Intl.supportedValuesOf("timeZone")
           : [defaultZone];
       if (!zones.includes(defaultZone)) zones.push(defaultZone);
-      zones.sort();
-      zones.forEach((zone) => {
+
+      const zoneOptions = zones
+        .map((zone) => ({ zone, offset: getOffsetMinutes(zone, now) }))
+        .sort((a, b) => a.offset - b.offset || a.zone.localeCompare(b.zone));
+
+      zoneOptions.forEach(({ zone }) => {
         const option = document.createElement("option");
         option.value = zone;
-        option.textContent = zone;
+        option.textContent = gmtLabel(zone, now);
         tzSelect.appendChild(option);
       });
       tzSelect.value = defaultZone;
