@@ -129,22 +129,33 @@ a.button {
   }
 }
 @keyframes blink-caret {
+  0% {
+    border-color: #000;
+  }
   50% {
     border-color: transparent;
+  }
+  100% {
+    border-color: #000;
   }
 }
 
 .typing-line {
   width: var(--w);
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
-  animation: typing var(--dur) steps(var(--steps), end) var(--delay) both;
+  border-right: 0.08em solid transparent;
+  animation-name: typing, blink-caret;
+  animation-duration: var(--dur), 0.5s;
+  animation-timing-function: steps(var(--steps), end), step-end;
+  animation-delay: var(--delay), var(--delay);
+  animation-iteration-count: 1, var(--blinks, 1);
+  animation-fill-mode: both, none;
 }
 
 #typing {
-  border-right: 0.08em solid black;
-  animation: typing var(--dur) steps(var(--steps), end) var(--delay) both,
-    blink-caret 0.5s step-end infinite alternate var(--delay);
+  animation-iteration-count: 1, infinite;
 }
 
 #photo {
