@@ -32,6 +32,7 @@
             <option value="PM">PM</option>
           </select>
         </div>
+        <a href="#" id="now-link" class="now-link">now</a>
       </div>
       <div class="duration-row">
         <label>end</label>
@@ -165,6 +166,18 @@
             calculateDuration();
           });
         });
+      });
+
+      const nowLink = document.getElementById("now-link");
+      const startFieldEl = document.querySelector('.time-entry[data-field="start"]');
+
+      nowLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        const now = new Date();
+        state.start.hour24 = now.getHours();
+        state.start.minute = now.getMinutes();
+        renderField(startFieldEl, "start");
+        calculateDuration();
       });
 
       formatButtons.forEach((btn) => {

@@ -216,9 +216,25 @@ a.button {
 
 .duration-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+}
+
+.now-link {
+  flex: 1 0 100%;
+  text-align: right;
+  font-size: 0.75rem;
+  color: #666;
+  background: none;
+  margin: 0;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.now-link:hover {
+  color: #000;
 }
 
 .time-entry {
